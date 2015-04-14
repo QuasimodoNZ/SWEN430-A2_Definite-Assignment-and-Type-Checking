@@ -124,7 +124,7 @@ public class SyntaxError extends RuntimeException {
 	 * Output the syntax error to a given output stream.
 	 */
 	public void outputSourceError(PrintStream output) {
-		if(filename == null) {
+		if (filename == null) {
 			output.println("syntax error: " + getMessage());
 		} else {
 			int line = 0;
@@ -134,25 +134,25 @@ public class SyntaxError extends RuntimeException {
 			try {
 				BufferedReader in = new BufferedReader(new InputStreamReader(
 						new FileInputStream(filename), "UTF-8"));
-				
-				// first, read whole file					   
-			    int len = 0;
-			    char[] buf = new char[1024]; 
-			    while((len = in.read(buf)) != -1) {
-			    	text.append(buf,0,len);	    	
-			    }
-				
+
+				// first, read whole file
+				int len = 0;
+				char[] buf = new char[1024];
+				while ((len = in.read(buf)) != -1) {
+					text.append(buf, 0, len);
+				}
+
 				while (lineEnd < text.length() && lineEnd <= start) {
 					lineStart = lineEnd;
-					lineEnd = parseLine(text,lineEnd);
+					lineEnd = parseLine(text, lineEnd);
 					line = line + 1;
 				}
 			} catch (IOException e) {
 				output.println("syntax error: " + getMessage());
 				return;
 			}
-			lineEnd = Math.min(lineEnd,text.length());
-			
+			lineEnd = Math.min(lineEnd, text.length());
+
 			output.println(filename + ":" + line + ": " + getMessage());
 			// NOTE: in the following lines I don't print characters
 			// individually. The reason for this is that it messes up the ANT
@@ -176,12 +176,13 @@ public class SyntaxError extends RuntimeException {
 				} else {
 					str += " ";
 				}
-			}						
+			}
+			str += " ";
 			for (int i = start; i <= end; ++i) {
 				str += "^";
 			}
 			output.println(str);
-		} 
+		}
 	}
 
 	private static int parseLine(StringBuilder text, int index) {
@@ -236,45 +237,49 @@ public class SyntaxError extends RuntimeException {
 		public InternalFailure(String msg, String filename, int start, int end) {
 			super(msg, filename, start, end);
 		}
+
 		public InternalFailure(String msg, String filename, int start, int end,
 				Throwable ex) {
 			super(msg, filename, start, end, ex);
 		}
+
 		public String getMessage() {
 			String msg = super.getMessage();
-			if(msg == null || msg.equals("")) {
+			if (msg == null || msg.equals("")) {
 				return "internal failure";
 			} else {
 				return "internal failure, " + msg;
 			}
 		}
 	}
-	
+
 	public static void internalFailure(String msg, String filename,
 			SyntacticElement elem) {
 		int start = -1;
-		int end = -1;		
-		
-		Attribute.Source attr = (Attribute.Source) elem.attribute(Attribute.Source.class);
-		if(attr != null) {
-			start=attr.start;
-			end=attr.end;			
+		int end = -1;
+
+		Attribute.Source attr = (Attribute.Source) elem
+				.attribute(Attribute.Source.class);
+		if (attr != null) {
+			start = attr.start;
+			end = attr.end;
 		}
-		
+
 		throw new InternalFailure(msg, filename, start, end);
 	}
-	
+
 	public static void internalFailure(String msg, String filename,
 			SyntacticElement elem, Throwable ex) {
 		int start = -1;
-		int end = -1;		
-		
-		Attribute.Source attr = (Attribute.Source) elem.attribute(Attribute.Source.class);
-		if(attr != null) {
-			start=attr.start;
-			end=attr.end;			
+		int end = -1;
+
+		Attribute.Source attr = (Attribute.Source) elem
+				.attribute(Attribute.Source.class);
+		if (attr != null) {
+			start = attr.start;
+			end = attr.end;
 		}
-		
+
 		throw new InternalFailure(msg, filename, start, end, ex);
 	}
 }
