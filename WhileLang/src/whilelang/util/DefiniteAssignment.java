@@ -64,11 +64,15 @@ public class DefiniteAssignment {
 	 *            The list of statements to check.
 	 * @param environment
 	 *            The set of variables which are definitely assigned.
+	 * @return
 	 */
-	public void check(List<Stmt> statements, Set<String> environment) {
+	public boolean check(List<Stmt> statements, Set<String> environment) {
+		boolean b = false;
 		for (Stmt s : statements) {
-			check(s, environment);
+			if (check(s, environment))
+				b = true;
 		}
+		return b;
 	}
 
 	/**
@@ -80,28 +84,32 @@ public class DefiniteAssignment {
 	 *            The statement to check.
 	 * @param environment
 	 *            The set of variables which are definitely assigned.
+	 * @return
 	 */
-	public void check(Stmt stmt, Set<String> environment) {
+	public boolean check(Stmt stmt, Set<String> environment) {
 		if (stmt instanceof Stmt.Assign) {
 			check((Stmt.Assign) stmt, environment);
 		} else if (stmt instanceof Stmt.Print) {
 			check((Stmt.Print) stmt, environment);
 		} else if (stmt instanceof Stmt.Return) {
 			check((Stmt.Return) stmt, environment);
+			return true;
 		} else if (stmt instanceof Stmt.VariableDeclaration) {
 			check((Stmt.VariableDeclaration) stmt, environment);
 		} else if (stmt instanceof Expr.Invoke) {
-			check((Expr.Invoke) stmt, environment);
+			return check((Expr.Invoke) stmt, environment);
 		} else if (stmt instanceof Stmt.IfElse) {
-			check((Stmt.IfElse) stmt, environment);
+			return check((Stmt.IfElse) stmt, environment);
 		} else if (stmt instanceof Stmt.For) {
-			check((Stmt.For) stmt, environment);
+			return check((Stmt.For) stmt, environment);
 		} else if (stmt instanceof Stmt.While) {
-			check((Stmt.While) stmt, environment);
+			return check((Stmt.While) stmt, environment);
 		} else {
 			internalFailure("unknown statement encountered (" + stmt + ")",
 					file.filename, stmt);
+			return true;
 		}
+		return false;
 	}
 
 	public void check(Stmt.Assign stmt, Set<String> environment) {
@@ -133,31 +141,46 @@ public class DefiniteAssignment {
 		}
 	}
 
-	public void check(Stmt.IfElse stmt, Set<String> environment) {
+	public boolean check(Stmt.IfElse stmt, Set<String> environment) {
 		check(stmt.getCondition(), environment);
 		HashSet<String> trueEnv = new HashSet<String>(environment);
 		HashSet<String> falseEnv = new HashSet<String>(environment);
-		check(stmt.getTrueBranch(), trueEnv);
-		check(stmt.getFalseBranch(), falseEnv);
+		boolean trueEndsExecution = check(stmt.getTrueBranch(), trueEnv);
+		boolean FalseEndsExecution = check(stmt.getFalseBranch(), falseEnv);
 
-		// add all items defined on both branches to environment
-		for (String var : trueEnv) {
-			if (falseEnv.contains(var)) {
-				environment.add(var);
+		if (trueEndsExecution && FalseEndsExecution) {
+			// Both sides end local execution therefore we end as well
+			return true;
+		} else if (trueEndsExecution) {
+			// This path ends execution, only environment changes that would
+			// have affect are on the other branch
+			environment.addAll(falseEnv);
+		} else if (FalseEndsExecution) {
+			// This path ends execution, only environment changes that would
+			// have affect are on the other branch
+			environment.addAll(trueEnv);
+		} else {
+			// add all items defined on both branches to environment
+			for (String var : trueEnv) {
+				if (falseEnv.contains(var)) {
+					environment.add(var);
+				}
 			}
 		}
+		return false;
 	}
 
-	public void check(Stmt.For stmt, Set<String> environment) {
+	public boolean check(Stmt.For stmt, Set<String> environment) {
 		check(stmt.getDeclaration(), environment);
 		check(stmt.getCondition(), environment);
-		check(stmt.getIncrement(), environment);
-		check(stmt.getBody(), new HashSet<String>(environment));
+		if (check(stmt.getIncrement(), environment))
+			return true;
+		return check(stmt.getBody(), new HashSet<String>(environment));
 	}
 
-	public void check(Stmt.While stmt, Set<String> environment) {
+	public boolean check(Stmt.While stmt, Set<String> environment) {
 		check(stmt.getCondition(), environment);
-		check(stmt.getBody(), new HashSet<String>(environment));
+		return check(stmt.getBody(), new HashSet<String>(environment));
 	}
 
 	/**
@@ -197,13 +220,12 @@ public class DefiniteAssignment {
 	}
 
 	public void check(Expr.Binary expr, Set<String> environment) {
-		// TODO: implement me!
 		check(expr.getLhs(), environment);
 		check(expr.getRhs(), environment);
 	}
 
 	public void check(Expr.Cast expr, Set<String> environment) {
-		// TODO: implement me!
+		check(expr.getSource(), environment);
 	}
 
 	public void check(Expr.Constant expr, Set<String> environment) {
@@ -211,33 +233,33 @@ public class DefiniteAssignment {
 	}
 
 	public void check(Expr.IndexOf expr, Set<String> environment) {
-		// TODO: implement me!
+		check(expr.getSource(), environment);
+		check(expr.getIndex(), environment);
 	}
 
-	public void check(Expr.Invoke expr, Set<String> environment) {
-		// TODO: implement me!
+	public boolean check(Expr.Invoke expr, Set<String> environment) {
+		for (Expr arg : expr.getArguments())
+			check(arg, environment);
+		return false;
 	}
 
 	public void check(Expr.ListConstructor expr, Set<String> environment) {
 		for (Expr arg : expr.getArguments())
 			check(arg, environment);
-		// TODO: implement me!
 	}
 
 	public void check(Expr.RecordAccess expr, Set<String> environment) {
-		// TODO: implement me!
 		check(expr.getSource(), environment);
 	}
 
 	public void check(Expr.RecordConstructor expr, Set<String> environment) {
-		// TODO: implement me!
-		for(Pair<String, Expr> pair : expr.getFields()){
+		for (Pair<String, Expr> pair : expr.getFields()) {
 			check(pair.second(), environment);
 		}
 	}
 
 	public void check(Expr.Unary expr, Set<String> environment) {
-		// TODO: implement me!
+		check(expr.getExpr(), environment);
 	}
 
 	public void check(Expr.Variable expr, Set<String> environment) {

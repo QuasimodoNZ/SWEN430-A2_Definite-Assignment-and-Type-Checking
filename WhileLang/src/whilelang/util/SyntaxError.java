@@ -177,7 +177,6 @@ public class SyntaxError extends RuntimeException {
 					str += " ";
 				}
 			}
-			str += " ";
 			for (int i = start; i <= end; ++i) {
 				str += "^";
 			}
